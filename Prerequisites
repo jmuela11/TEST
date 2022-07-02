@@ -1,0 +1,37 @@
+
+data _VR_PREQREQUISITES;
+	KEEP DPM_RELEASE ID Table Prerequisites InterPieces order ;
+	set _prereq0 (keep=dpm_release id Prerequisites);
+	by id;
+	retain ExpressionID ;
+	Length Table $20 ;
+	Order=0;/*reset the order counter*/
+	Prerequisites=compress(Prerequisites,'[]');
+
+	if _n_=1 then do;
+		ExpressionID = prxparse('/([ACFPSTZM]\s\d{2,3}\.\d{2}(?:\.(?:[a-z]|\d(?:\.[a-e])?))?|(?:R\s\d))/'); /*Macthes all tables*/
+	end;
+		
+	text=Prerequisites;
+	start = 1;
+	stop = length(text);
+	call prxnext(ExpressionID, start, stop, text, position, length);
+	cut=1;
+	if position > 0 ;
+	do while (position > 0) ;/*Loop through the prerequisites while tables are found*/
+		TABLE = substr(text, position, length);
+		if position > 1 then 
+			InterPieces=substr(text,cut,position-cut); /*Extract the text between the tables found*/
+		order+1;
+		output;
+		cut=position+length;
+		call prxnext(ExpressionID, start, stop, text, position, length);
+		 
+	end;
+	InterPieces=substr(text,cut);
+	if last.id and compress(InterPieces) ne '' then do;
+		Table='';
+		order+1;
+		output;
+	end;
+run;
